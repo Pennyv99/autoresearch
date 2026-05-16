@@ -516,7 +516,11 @@ optimizer = model.setup_optimizer(
     weight_decay=WEIGHT_DECAY,
 )
 
-model = torch.compile(model, dynamic=False)
+try:
+    import triton  # noqa: F401
+    model = torch.compile(model, dynamic=False)
+except Exception as e:
+    print(f"torch.compile unavailable, running eager: {e}")
 
 train_loader = make_dataloader(tokenizer, DEVICE_BATCH_SIZE, MAX_SEQ_LEN, "train")
 x, y, epoch = next(train_loader)  # prefetch first batch
