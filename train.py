@@ -18,6 +18,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 try:
+    import triton  # noqa: F401
+    HAS_TRITON = True
+except Exception:
+    HAS_TRITON = False
+
+def maybe_compile(*args, **kwargs):
+    return torch.compile(*args, **kwargs) if HAS_TRITON else (lambda f: f)
+
+try:
     from kernels import get_kernel
     cap = torch.cuda.get_device_capability()
     # varunneal's FA3 is Hopper only, use kernels-community on non-Hopper GPUs
@@ -313,7 +322,7 @@ polar_express_coeffs = [
     (2.3465413258596377, -1.7097828382687081, 0.42323551169305323),
 ]
 
-@torch.compile(dynamic=False, fullgraph=True)
+@maybe_compile(dynamic=False, fullgraph=True)
 def adamw_step_fused(p, grad, exp_avg, exp_avg_sq, step_t, lr_t, beta1_t, beta2_t, eps_t, wd_t):
     p.mul_(1 - lr_t * wd_t)
     exp_avg.lerp_(grad, 1 - beta1_t)
@@ -324,7 +333,7 @@ def adamw_step_fused(p, grad, exp_avg, exp_avg_sq, step_t, lr_t, beta1_t, beta2_
     step_size = lr_t / bias1
     p.add_(exp_avg / denom, alpha=-step_size)
 
-@torch.compile(dynamic=False, fullgraph=True)
+@maybe_compile(dynamic=False, fullgraph=True)
 def muon_step_fused(stacked_grads, stacked_params, momentum_buffer, second_momentum_buffer,
                     momentum_t, lr_t, wd_t, beta2_t, ns_steps, red_dim):
     # Nesterov momentum
@@ -517,7 +526,7 @@ optimizer = model.setup_optimizer(
 )
 
 try:
-    import triton  # noqa: F401
+    assert HAS_TRITON
     model = torch.compile(model, dynamic=False)
 except Exception as e:
     print(f"torch.compile unavailable, running eager: {e}")
