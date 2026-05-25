@@ -22,19 +22,21 @@ MAX_SEQ_LEN = 512
 DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
 
 REPO_ROOT = Path(__file__).resolve().parent
-DATA_PATH = REPO_ROOT / "data" / "dpo.jsonl"
+SFT_PATH = REPO_ROOT / "data" / "sft.jsonl"
+DPO_PATH = REPO_ROOT / "data" / "dpo.jsonl"
 DATA_MARKER = REPO_ROOT / "data" / ".dataset_ready"
-SAMPLE_400_PATH = REPO_ROOT / "data" / "sample_400.jsonl"
-TRAIN_PATH = REPO_ROOT / "data" / "train_320.jsonl"
-VAL_PATH = REPO_ROOT / "data" / "val_80.jsonl"
 
-TOTAL_SAMPLES = 400
+SFT_TRAIN_PATH = REPO_ROOT / "data" / "sft_train.jsonl"
+SFT_VAL_PATH = REPO_ROOT / "data" / "sft_val.jsonl"
+DPO_TRAIN_PATH = REPO_ROOT / "data" / "dpo_train.jsonl"
+DPO_VAL_PATH = REPO_ROOT / "data" / "dpo_val.jsonl"
+
 SAMPLE_SEED = 42
-YES_NO_RATIO = 0.30
 TRAIN_RATIO = 0.80
 
 CACHE_DIR = Path(os.path.expanduser("~")) / ".cache" / "autoresearch"
-SPLIT_CACHE = CACHE_DIR / "split_400.json"
+SFT_SPLIT_CACHE = CACHE_DIR / "split_sft.json"
+DPO_SPLIT_CACHE = CACHE_DIR / "split_dpo.json"
 
 # ---------------------------------------------------------------------------
 # Dataset loading
@@ -57,6 +59,16 @@ def build_user_content(record):
     return instruction or inp
 
 
+def get_assistant_target(record):
+    if "chosen" in record:
+        return record["chosen"]
+    if "output" in record:
+        return record["output"]
+    if record.get("messages") and record["messages"][-1]["role"] == "assistant":
+        return record["messages"][-1]["content"]
+    raise KeyError("Record has no assistant target (chosen/output/messages)")
+
+
 def build_messages(record, assistant_content=None):
     if record.get("messages"):
         messages = [{"role": m["role"], "content": m["content"]} for m in record["messages"]]
@@ -67,18 +79,18 @@ def build_messages(record, assistant_content=None):
         return messages
 
     user_content = build_user_content(record)
-    assistant = assistant_content if assistant_content is not None else record["chosen"]
+    assistant = assistant_content if assistant_content is not None else get_assistant_target(record)
     return [
         {"role": "user", "content": user_content},
         {"role": "assistant", "content": normalize_output(assistant, record.get("task"))},
     ]
 
 
-def load_all_records():
-    if not DATA_PATH.exists():
-        raise FileNotFoundError(f"Dataset not found: {DATA_PATH}")
+def load_jsonl(path):
+    if not path.exists():
+        raise FileNotFoundError(f"Dataset not found: {path}")
     records = []
-    with open(DATA_PATH, encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if line:
@@ -86,25 +98,20 @@ def load_all_records():
     return records
 
 
-def stratified_sample(records):
-    tool_call = [r for r in records if r.get("task") == "tool_call"]
-    groundedness = [r for r in records if r.get("task") == "groundedness"]
-    n_tool = int(round(TOTAL_SAMPLES * YES_NO_RATIO))
-    n_ground = TOTAL_SAMPLES - n_tool
-    if len(tool_call) < n_tool or len(groundedness) < n_ground:
-        raise ValueError(
-            f"Not enough samples: need {n_tool} tool_call and {n_ground} groundedness, "
-            f"have {len(tool_call)} and {len(groundedness)}"
-        )
-    rng = random.Random(SAMPLE_SEED)
-    sampled = rng.sample(tool_call, n_tool) + rng.sample(groundedness, n_ground)
-    rng.shuffle(sampled)
-    return sampled
+def normalize_sft_record(record):
+    """Ensure SFT rows expose `chosen` for shared training/eval code."""
+    out = dict(record)
+    if "chosen" not in out and "output" in out:
+        out["chosen"] = out["output"]
+    return out
 
 
-def split_records(records):
-    n_train = int(len(records) * TRAIN_RATIO)
-    return records[:n_train], records[n_train:]
+def shuffle_and_split(records, seed=SAMPLE_SEED):
+    rng = random.Random(seed)
+    order = records[:]
+    rng.shuffle(order)
+    n_train = int(len(order) * TRAIN_RATIO)
+    return order[:n_train], order[n_train:]
 
 
 def write_jsonl(path, records):
@@ -114,26 +121,45 @@ def write_jsonl(path, records):
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def export_splits_to_data(train, val):
-    write_jsonl(TRAIN_PATH, train)
-    write_jsonl(VAL_PATH, val)
-    write_jsonl(SAMPLE_400_PATH, train + val)
+def export_splits(mode, train, val):
+    if mode == "sft":
+        write_jsonl(SFT_TRAIN_PATH, train)
+        write_jsonl(SFT_VAL_PATH, val)
+    elif mode == "dpo":
+        write_jsonl(DPO_TRAIN_PATH, train)
+        write_jsonl(DPO_VAL_PATH, val)
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
 
 
-def get_splits():
-    if SPLIT_CACHE.exists():
-        with open(SPLIT_CACHE, encoding="utf-8") as f:
+def build_splits(mode, force=False):
+    if mode == "sft":
+        source_path, cache_path = SFT_PATH, SFT_SPLIT_CACHE
+        records = [normalize_sft_record(r) for r in load_jsonl(source_path)]
+        seed = SAMPLE_SEED
+    elif mode == "dpo":
+        source_path, cache_path = DPO_PATH, DPO_SPLIT_CACHE
+        records = load_jsonl(source_path)
+        seed = SAMPLE_SEED + 1
+    else:
+        raise ValueError(f"Unknown mode: {mode} (use 'sft' or 'dpo')")
+
+    if not force and cache_path.exists():
+        with open(cache_path, encoding="utf-8") as f:
             cached = json.load(f)
         train, val = cached["train"], cached["val"]
     else:
-        sampled = stratified_sample(load_all_records())
-        train, val = split_records(sampled)
+        train, val = shuffle_and_split(records, seed=seed)
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        with open(SPLIT_CACHE, "w", encoding="utf-8") as f:
+        with open(cache_path, "w", encoding="utf-8") as f:
             json.dump({"train": train, "val": val}, f, ensure_ascii=False)
 
-    export_splits_to_data(train, val)
+    export_splits(mode, train, val)
     return train, val
+
+
+def get_splits(mode="sft"):
+    return build_splits(mode, force=False)
 
 
 def split_stats(split):
@@ -445,15 +471,19 @@ def preview_val_generations(model, tokenizer, val_records, n_examples=3, max_new
 # Main
 # ---------------------------------------------------------------------------
 
-def verify_and_prepare(model_name=DEFAULT_MODEL):
-    records = load_all_records()
-    train, val = get_splits()
-    print(f"Dataset: data/dpo.jsonl ({len(records)} total rows)")
-    print(f"Sampled: {TOTAL_SAMPLES} (seed={SAMPLE_SEED})")
-    print(f"Train: {len(train)} {split_stats(train)}")
-    print(f"Val:   {len(val)} {split_stats(val)}")
-    print(f"Exported: data/train_320.jsonl, data/val_80.jsonl, data/sample_400.jsonl")
-    print(f"Split cache: autoresearch/split_400.json (under ~/.cache)")
+def verify_and_prepare(model_name=DEFAULT_MODEL, force_splits=True):
+    sft_all = load_jsonl(SFT_PATH)
+    dpo_all = load_jsonl(DPO_PATH)
+    sft_train, sft_val = build_splits("sft", force=force_splits)
+    dpo_train, dpo_val = build_splits("dpo", force=force_splits)
+
+    print(f"SFT source: data/sft.jsonl ({len(sft_all)} rows)")
+    print(f"  train: {len(sft_train)} {split_stats(sft_train)} -> {SFT_TRAIN_PATH.name}")
+    print(f"  val:   {len(sft_val)} {split_stats(sft_val)} -> {SFT_VAL_PATH.name}")
+    print(f"DPO source: data/dpo.jsonl ({len(dpo_all)} rows)")
+    print(f"  train: {len(dpo_train)} {split_stats(dpo_train)} -> {DPO_TRAIN_PATH.name}")
+    print(f"  val:   {len(dpo_val)} {split_stats(dpo_val)} -> {DPO_VAL_PATH.name}")
+    print(f"Split cache: {SFT_SPLIT_CACHE.name}, {DPO_SPLIT_CACHE.name} (under ~/.cache/autoresearch)")
     print()
     print(f"Loading tokenizer and model: {model_name}")
     load_tokenizer(model_name)

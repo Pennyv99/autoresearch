@@ -39,7 +39,7 @@ LORA_DROPOUT = 0.05
 TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
 
 # Training schedule (epoch-based, no wall-clock limit)
-MAX_EPOCHS = 10
+MAX_EPOCHS = 6 if TRAINING_MODE == "dpo" else 10
 EVAL_EVERY_STEPS = 40       # ~1 epoch on 320 train samples with batch 8
 EARLY_STOP_PATIENCE = 3     # stop after this many evals without val improvement
 
@@ -56,6 +56,8 @@ GRAD_ACCUM_STEPS = 4
 
 # DPO
 BETA_DPO = 0.1
+# Fraction of grad-accum micro-steps that run DPO (rest = SFT replay on tool_call)
+DPO_REPLAY_RATIO = 0.5
 
 # Checkpointing
 SAVE_BEST_CHECKPOINT = True
@@ -83,8 +85,13 @@ print(f"Model: {DEFAULT_MODEL}")
 print(f"Device: {device}")
 
 tokenizer = load_tokenizer()
-train_records, val_records = get_splits()
+train_records, val_records = get_splits(TRAINING_MODE)
+sft_train_records, sft_val_records = (None, None)
+if TRAINING_MODE == "dpo":
+    sft_train_records, sft_val_records = get_splits("sft")
 print(f"Train samples: {len(train_records)}, Val samples: {len(val_records)}")
+if TRAINING_MODE == "dpo":
+    print(f"SFT replay train: {len(sft_train_records)}, SFT val (retention): {len(sft_val_records)}")
 
 model = load_base_model(device=device)
 lora_config = LoraConfig(
@@ -119,10 +126,19 @@ optimizer = AdamW(
     weight_decay=WEIGHT_DECAY,
 )
 
+train_loader = None
+sft_replay_loader = None
+n_dpo_micro = GRAD_ACCUM_STEPS
 if TRAINING_MODE == "sft":
     train_loader = make_sft_dataloader(train_records, tokenizer, DEVICE_BATCH_SIZE, MAX_SEQ_LEN)
 else:
     train_loader = make_dpo_dataloader(train_records, tokenizer, DEVICE_BATCH_SIZE, MAX_SEQ_LEN)
+    sft_replay_loader = make_sft_dataloader(
+        sft_train_records, tokenizer, DEVICE_BATCH_SIZE, MAX_SEQ_LEN
+    )
+    n_dpo_micro = max(1, min(GRAD_ACCUM_STEPS - 1, round(GRAD_ACCUM_STEPS * DPO_REPLAY_RATIO)))
+    n_sft_micro = GRAD_ACCUM_STEPS - n_dpo_micro
+    print(f"DPO micro-steps/step: {n_dpo_micro}, SFT replay micro-steps/step: {n_sft_micro}")
 
 samples_per_step = DEVICE_BATCH_SIZE * GRAD_ACCUM_STEPS
 steps_per_epoch = max(1, math.ceil(len(train_records) / samples_per_step))
@@ -149,9 +165,14 @@ def get_lr_multiplier(progress):
 def run_val_eval():
     if TRAINING_MODE == "sft":
         return evaluate_sft_loss(model, tokenizer, val_records, DEVICE_BATCH_SIZE)
-    return evaluate_dpo_loss(
+    dpo_metric = evaluate_dpo_loss(
         model, tokenizer, val_records, DEVICE_BATCH_SIZE, beta=BETA_DPO, ref_model=ref_model
     )
+    sft_val_metric = evaluate_sft_loss(
+        model, tokenizer, sft_val_records, DEVICE_BATCH_SIZE
+    )
+    print(f"  sft_val_metric={sft_val_metric:.6f} (tool_call retention, lower=better)")
+    return dpo_metric
 
 
 def save_checkpoint(path):
@@ -178,19 +199,24 @@ while step < total_steps:
     optimizer.zero_grad(set_to_none=True)
     train_loss = None
 
+    micro_loss_sum = 0.0
     for micro_step in range(GRAD_ACCUM_STEPS):
-        batch = next(train_loader)
+        use_dpo = TRAINING_MODE == "dpo" and micro_step < n_dpo_micro
+        loader = train_loader if use_dpo or TRAINING_MODE == "sft" else sft_replay_loader
+        batch = next(loader)
         batch = {k: v.to(device) for k, v in batch.items()}
 
         with autocast_ctx:
-            if TRAINING_MODE == "sft":
+            if TRAINING_MODE == "sft" or not use_dpo:
                 outputs = model(**batch)
                 loss = outputs.loss / GRAD_ACCUM_STEPS
             else:
                 loss = dpo_batch_loss(model, batch, BETA_DPO, ref_model=ref_model) / GRAD_ACCUM_STEPS
 
-        train_loss = loss.detach() * GRAD_ACCUM_STEPS
+        micro_loss_sum += loss.detach().item() * GRAD_ACCUM_STEPS
         loss.backward()
+
+    train_loss = torch.tensor(micro_loss_sum / GRAD_ACCUM_STEPS)
 
     progress = min(step / max(total_steps - 1, 1), 1.0)
     lrm = get_lr_multiplier(progress)
@@ -248,7 +274,7 @@ while step < total_steps:
             f"\n  eval step {step}: val_metric={val_metric:.6f}"
             + (" *best*" if improved else "")
         )
-        preview_val_generations(model, tokenizer, val_records, n_examples=1)
+        preview_val_generations(model, tokenizer, val_records, n_examples=3)
 
         if evals_without_improvement >= EARLY_STOP_PATIENCE:
             print(f"Early stop at step {step} (no improvement for {EARLY_STOP_PATIENCE} evals)")
@@ -267,6 +293,8 @@ if SAVE_BEST_CHECKPOINT and best_checkpoint_path.exists() and best_step >= 0:
     model.eval()
     val_metric = run_val_eval()
     preview_val_generations(model, tokenizer, val_records, n_examples=3)
+    if TRAINING_MODE == "dpo":
+        preview_val_generations(model, tokenizer, sft_val_records, n_examples=2)
 else:
     val_metric = final_val_metric if best_step < 0 else best_val_metric
     preview_val_generations(model, tokenizer, val_records, n_examples=3)
@@ -288,7 +316,10 @@ print(f"peak_vram_mb:     {peak_vram_mb:.1f}")
 print(f"num_steps:        {step}")
 print(f"max_epochs:       {MAX_EPOCHS}")
 print(f"lora_r:           {LORA_R}")
-print(f"learning_rate:    {LEARNING_RATE}")
+lr_report = LEARNING_RATE_DPO if TRAINING_MODE == "dpo" else LEARNING_RATE
+print(f"learning_rate:    {lr_report}")
+if TRAINING_MODE == "dpo":
+    print(f"dpo_replay_ratio: {DPO_REPLAY_RATIO}")
 if SAVE_BEST_CHECKPOINT and best_checkpoint_path.exists():
     print(f"checkpoint:       {best_checkpoint_path}")
 if LORA_ADAPTER_PATH:
