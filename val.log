@@ -1,0 +1,507 @@
+# val.py log started 2026-05-25T12:27:56
+#问 product lineup，答成 storyboard 内容
+Stripe teaser 答成 15s vertical ad
+Rivian social following 数字不对
+Val split (dpo): 80 samples {'groundedness': 80}
+Device: cuda
+Log file: C:\Users\99273\OneDrive\文档\autoresearch\val.log
+
+
+Loading weights:   0%|                                                                                                                                    | 0/290 [00:00<?, ?it/s]
+Loading weights: 100%|#######################################################################################################################| 290/290 [00:00<00:00, 13809.74it/s]
+  generated 20/80...
+  generated 40/80...
+  generated 60/80...
+  generated 80/80...
+=== checkpoints/sft/best (80 samples) ===
+  exact:        3.8% (3/80)
+  tool_prefix:  0.0%
+  body_exact:   3.8%
+  degenerate:   0.0% (0 bad)
+  [groundedness] exact: 3.8% (3/80)
+
+--- errors (77/77) ---
+[1] task=groundedness
+    query:    Query: Make an Instagram reel for Airbnb: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Air
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Airbnb
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Airbnb
+[2] task=groundedness
+    query:    Query: Produce a TV spot storyboard video for Canva (Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Can)
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Canva
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Canva
+[3] task=groundedness
+    query:    Query: How much is BMW's current campaign tagline right now?
+    expected: The current campaign tagline is Open Happiness — Share the Moment.
+    got:      Open Happiness — Share the Moment
+[4] task=groundedness
+    query:    Query: What's Shopify's current social media following?
+    expected: The social media following is X: 2,767,397 followers.
+    got:      X: 2,767,397 followers
+[5] task=groundedness
+    query:    Query: Tell me Starbucks's current campaign tagline.
+    expected: The current campaign tagline is Think Different — Now with AI.
+    got:      Think Different — Now with AI
+[6] task=groundedness
+    query:    Query: What is OpenAI's latest market cap?
+    expected: The market cap is $478.2B.
+    got:      $478.2B
+[7] task=groundedness
+    query:    Query: Tell me Netflix's stock price.
+    expected: The stock price is $601.74.
+    got:      $601.74
+[8] task=groundedness
+    query:    Query: How much is DoorDash's CEO right now?
+    expected: The CEO is Alex Chen.
+    got:      Alex Chen
+[9] task=groundedness
+    query:    Query: Tell me Starbucks's current campaign tagline.
+    expected: The current campaign tagline is Think Different — Now with AI.
+    got:      Think Different — Now with AI
+[10] task=groundedness
+    query:    Query: How much is Starbucks's primary brand color right now?
+    expected: The primary brand color is #1DB954.
+    got:      #1DB954
+[11] task=groundedness
+    query:    Query: What's Adidas's current main competitor mentioned in filings?
+    expected: The main competitor mentioned in filings is Booking.com.
+    got:      Booking.com
+[12] task=groundedness
+    query:    Query: How much is Canva's next major event right now?
+    expected: The next major event is Apr 12–14, 2026 — Global product keynote (livestream).
+    got:      Apr 12–14, 2026 — Global product keynote (livestream)
+[13] task=groundedness
+    query:    Query: How much is Adidas's primary brand color right now?
+    expected: The primary brand color is #1DB954.
+    got:      #1DB954
+[14] task=groundedness
+    query:    Query: What's Spotify's current social media following?
+    expected: The social media following is TikTok: 11,165,755 followers.
+    got:      11,165,755 followers
+[15] task=groundedness
+    query:    Query: What's DoorDash's current customer NPS?
+    expected: The customer NPS is NPS 58 (Q2 2025).
+    got:      NPS 58 (Q2 2025)
+[16] task=groundedness
+    query:    Query: For Disney, what is the market cap?
+    expected: The market cap is $491.9B.
+    got:      $491.9B
+[17] task=groundedness
+    query:    Query: Tell me Airbnb's stock price.
+    expected: The stock price is $239.57.
+    got:      $239.57
+[18] task=groundedness
+    query:    Query: What is Stripe's latest social media following?
+    expected: The social media following is LinkedIn: 22,134,250 followers.
+    got:      22,134,250 followers
+[19] task=groundedness
+    query:    Query: How much is Tesla's current campaign tagline right now?
+    expected: The current campaign tagline is Open Happiness — Share the Moment.
+    got:      Open Happiness — Share the Moment
+[20] task=groundedness
+    query:    Query: What's Spotify's current next major event?
+    expected: The next major event is Mar 12–14, 2026 — Global product keynote (livestream).
+    got:      Global product keynote (livestream)
+[21] task=groundedness
+    query:    Query: Tell me Spotify's customer NPS.
+    expected: The customer NPS is NPS 68 (Q2 2025).
+    got:      NPS 68 (Q2 2025)
+[22] task=groundedness
+    query:    Query: Make an Instagram reel for Airbnb: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Air
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Airbnb
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Airbnb
+[23] task=groundedness
+    query:    Query: Produce a TV spot storyboard video for Sephora (Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Sep)
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Sephora
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Sephora
+[24] task=groundedness
+    query:    Query: What is Spotify's latest market cap?
+    expected: The market cap is $736.8B.
+    got:      $736.8B
+[25] task=groundedness
+    query:    Query: What is Rivian's latest primary brand color?
+    expected: The primary brand color is #000000.
+    got:      #000000
+[26] task=groundedness
+    query:    Query: For Tesla, what is the market cap?
+    expected: The market cap is $1373.7B.
+    got:      $1373.7B
+[27] task=groundedness
+    query:    Query: How much is Sephora's annual revenue right now?
+    expected: The annual revenue is $155.49B (2026).
+    got:      $155.49B
+[28] task=groundedness
+    query:    Query: For Salesforce, what is the market cap?
+    expected: The market cap is $1281.1B.
+    got:      $1281.1B
+[29] task=groundedness
+    query:    Query: What's Canva's current main competitor mentioned in filings?
+    expected: The main competitor mentioned in filings is Booking.com.
+    got:      Booking.com
+[30] task=groundedness
+    query:    Query: What's Disney's current customer NPS?
+    expected: The customer NPS is NPS 38 (Q1 2025).
+    got:      38 (Q1 2025)
+[31] task=groundedness
+    query:    Query: What's Disney's current latest product lineup?
+    expected: The latest product lineup is Loyalty tier refresh, Flagship SKU, Holiday bundle.
+    got:      Loyalty tier refresh, Flagship SKU, Holiday bundle
+[32] task=groundedness
+    query:    Query: Generate a 15s vertical ad for Patagonia — 15s vertical ad: Patagonia hero product in urban night scene, neon reflections,
+    expected: Video plan: 15s vertical ad: Patagonia hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+    got:      15s vertical ad: Patagonia hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+[33] task=groundedness
+    query:    Query: What's Red Bull's current market cap?
+    expected: The market cap is $2920.8B.
+    got:      $2920.8B
+[34] task=groundedness
+    query:    Query: For BMW, what is the social media following?
+    expected: The social media following is Instagram: 38,833,925 followers.
+    got:      38,833,925 followers
+[35] task=groundedness
+    query:    Query: How much is Lululemon's next major event right now?
+    expected: The next major event is Apr 12–14, 2026 — Global product keynote (livestream).
+    got:      Apr 12–14, 2026 — Global product keynote (livestream)
+[36] task=groundedness
+    query:    Query: What is Adidas's latest next major event?
+    expected: The next major event is Apr 12–14, 2026 — Global product keynote (livestream).
+    got:      Apr 12–14, 2026 — Global product keynote (livestream)
+[37] task=groundedness
+    query:    Query: What is Adidas's latest next major event?
+    expected: The next major event is Apr 12–14, 2026 — Global product keynote (livestream).
+    got:      Apr 12–14, 2026 — Global product keynote (livestream)
+[38] task=groundedness
+    query:    Query: Tell me Adidas's customer NPS.
+    expected: The customer NPS is NPS 31 (Q1 2025).
+    got:      31 (Q1 2025)
+[39] task=groundedness
+    query:    Query: What's Starbucks's current latest product lineup?
+    expected: The latest product lineup is Fountain remix, Summer limited can, Zero Sugar Lime.
+    got:      Scene1: family morning | Scene2: product in use | Scene3: logo + URL
+[40] task=groundedness
+    query:    Query: Tell me Airbnb's stock price.
+    expected: The stock price is $239.57.
+    got:      $239.57
+[41] task=groundedness
+    query:    Query: What is Sephora's latest headquarters?
+    expected: The headquarters is Amsterdam.
+    got:      Amsterdam
+[42] task=groundedness
+    query:    Query: How much is HubSpot's next major event right now?
+    expected: The next major event is Nov 12–14, 2026 — Global product keynote (livestream).
+    got:      Nov 12–14, 2026 — Global product keynote (livestream)
+[43] task=groundedness
+    query:    Query: What's Adidas's current market cap?
+    expected: The market cap is $613.4B.
+    got:      $613.4B
+[44] task=groundedness
+    query:    Query: I need a product launch teaser video for Stripe.
+    expected: Video plan: 6s teaser: silhouette reveal, logo sting, 'Coming March 2026' supers
+    got:      15s vertical ad: Stripe hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+[45] task=groundedness
+    query:    Query: For Salesforce, what is the employee count?
+    expected: The employee count is 32,702.
+    got:      32,702
+[46] task=groundedness
+    query:    Query: Generate a 15s vertical ad for Tesla — 15s vertical ad: Tesla hero product in urban night scene, neon reflections, upbe
+    expected: Video plan: 15s vertical ad: Tesla hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Tesla
+[47] task=groundedness
+    query:    Query: What's Adidas's current market cap?
+    expected: The market cap is $613.4B.
+    got:      $613.4B
+[48] task=groundedness
+    query:    Query: Produce a TV spot storyboard video for Netflix (Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Net)
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Netflix
+    got:      Scene1: family morning | Scene2: product in use | Scene3: logo + URL
+[49] task=groundedness
+    query:    Query: Create a short promo video for Coca-Cola based on: 15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections,
+    expected: Video plan: 15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+    got:      15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+[50] task=groundedness
+    query:    Query: Generate a 15s vertical ad for Nike — Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Nik
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Nike
+    got:      15s vertical ad: Nike hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+[51] task=groundedness
+    query:    Query: How much is Tesla's main competitor mentioned in filings right now?
+    expected: The main competitor mentioned in filings is Pepsi.
+    got:      Pepsi
+[52] task=groundedness
+    query:    Query: Produce a TV spot storyboard video for Netflix (Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Net)
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Netflix
+    got:      Scene1: family morning | Scene2: product in use | Scene3: logo + URL
+[53] task=groundedness
+    query:    Query: Create a short promo video for Coca-Cola based on: 15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections,
+    expected: Video plan: 15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+    got:      15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+[54] task=groundedness
+    query:    Query: Make an Instagram reel for Stripe: 15s vertical ad: Stripe hero product in urban night scene, neon reflections, upb
+    expected: Video plan: 15s vertical ad: Stripe hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+    got:      15s vertical ad: Stripe hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+[55] task=groundedness
+    query:    Query: What's Rivian's current social media following?
+    expected: The social media following is LinkedIn: 32,790,824 followers.
+    got:      15,824,400
+[56] task=groundedness
+    query:    Query: Tell me OpenAI's headquarters.
+    expected: The headquarters is Austin, TX.
+    got:      Austin, TX
+[57] task=groundedness
+    query:    Query: What's Tesla's current annual revenue?
+    expected: The annual revenue is $374.55B (2026).
+    got:      $374.55B
+[58] task=groundedness
+    query:    Query: Generate a 15s vertical ad for Salesforce — Scene1: family morning | Scene2: product in use | Scene3: logo + URL
+    expected: Video plan: Scene1: family morning | Scene2: product in use | Scene3: logo + URL
+    got:      Hook: 'POV: you finally upgraded' 3 quick cuts | CTA: link in bio | Brand: Salesforce
+[59] task=groundedness
+    query:    Query: What's DoorDash's current customer NPS?
+    expected: The customer NPS is NPS 58 (Q2 2025).
+    got:      NPS 58 (Q2 2025)
+[60] task=groundedness
+    query:    Query: Tell me Nike's stock price.
+    expected: The stock price is $830.08.
+    got:      $830.08
+[61] task=groundedness
+    query:    Query: What's Peloton's current annual revenue?
+    expected: The annual revenue is $34.38B (2026).
+    got:      $34.38B
+[62] task=groundedness
+    query:    Query: What's Adidas's current main competitor mentioned in filings?
+    expected: The main competitor mentioned in filings is Booking.com.
+    got:      Booking.com
+[63] task=groundedness
+    query:    Query: I need a product launch teaser video for HubSpot.
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: HubSpot
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: HubSpot
+[64] task=groundedness
+    query:    Query: For Spotify, what is the primary brand color?
+    expected: The primary brand color is #1DB954.
+    got:      #1DB954
+[65] task=groundedness
+    query:    Query: How much is Lululemon's next major event right now?
+    expected: The next major event is Apr 12–14, 2026 — Global product keynote (livestream).
+    got:      Apr 12–14, 2026 — Global product keynote (livestream)
+[66] task=groundedness
+    query:    Query: I need a product launch teaser video for Salesforce.
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Salesforce
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Salesforce
+[67] task=groundedness
+    query:    Query: How much is Canva's CEO right now?
+    expected: The CEO is Alex Chen.
+    got:      Alex Chen
+[68] task=groundedness
+    query:    Query: What is Stripe's latest social media following?
+    expected: The social media following is LinkedIn: 22,134,250 followers.
+    got:      22,134,250 followers
+[69] task=groundedness
+    query:    Query: Tell me Adidas's employee count.
+    expected: The employee count is 219,089.
+    got:      219,089
+[70] task=groundedness
+    query:    Query: What's Disney's current latest product lineup?
+    expected: The latest product lineup is Loyalty tier refresh, Flagship SKU, Holiday bundle.
+    got:      Loyalty tier refresh, Flagship SKU, Holiday bundle
+[71] task=groundedness
+    query:    Query: What is Tesla's latest social media following?
+    expected: The social media following is Instagram: 38,179,090 followers.
+    got:      38,179,090 followers
+[72] task=groundedness
+    query:    Query: What's OpenAI's current next major event?
+    expected: The next major event is Jun 12–14, 2026 — Global product keynote (livestream).
+    got:      Jun 12–14, 2026 — Global product keynote (livestream)
+[73] task=groundedness
+    query:    Query: What's Stripe's current next major event?
+    expected: The next major event is Sep 12–14, 2026 — Global product keynote (livestream).
+    got:      Sep 12–14, 2026 — Global product keynote (livestream)
+[74] task=groundedness
+    query:    Query: Tell me Airbnb's annual revenue.
+    expected: The annual revenue is $263.53B (2025).
+    got:      $263.53B
+[75] task=groundedness
+    query:    Query: What's Adidas's current main competitor mentioned in filings?
+    expected: The main competitor mentioned in filings is Booking.com.
+    got:      Booking.com
+[76] task=groundedness
+    query:    Query: Create a short promo video for OpenAI based on: 6s teaser: silhouette reveal, logo sting, 'Coming March 2026' supers
+    expected: Video plan: 6s teaser: silhouette reveal, logo sting, 'Coming March 2026' supers
+    got:      15s vertical ad: OpenAI hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+[77] task=groundedness
+    query:    Query: What's Stripe's current next major event?
+    expected: The next major event is Sep 12–14, 2026 — Global product keynote (livestream).
+    got:      Sep 12–14, 2026 — Global product keynote (livestream)
+--- end errors ---
+eval_seconds: 48.5
+
+
+Loading weights:   0%|                                                                                                                                    | 0/290 [00:00<?, ?it/s]
+Loading weights: 100%|#######################################################################################################################| 290/290 [00:00<00:00, 12336.06it/s]
+  generated 20/80...
+  generated 40/80...
+  generated 60/80...
+  generated 80/80...
+=== checkpoints/dpo/best (80 samples) ===
+  exact:        52.5% (42/80)
+  tool_prefix:  0.0%
+  body_exact:   52.5%
+  degenerate:   0.0% (0 bad)
+  [groundedness] exact: 52.5% (42/80)
+
+--- errors (38/38) ---
+[1] task=groundedness
+    query:    Query: Make an Instagram reel for Airbnb: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Air
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Airbnb
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Airbnb
+[2] task=groundedness
+    query:    Query: What is Coca-Cola's latest latest product lineup?
+    expected: The latest product lineup is Fountain remix, Summer limited can, Zero Sugar Lime.
+    got:      The latest product lineup: Fountain remix, Summer limited can, Zero Sugar Lime.
+[3] task=groundedness
+    query:    Query: Produce a TV spot storyboard video for Canva (Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Can)
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Canva
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Canva Video plan: 6s teaser: silhouette reveal, logo sting, 'Coming March 2026' supers Instagram: 7,352,952 followers CE...
+[4] task=groundedness
+    query:    Query: What is Coca-Cola's latest latest product lineup?
+    expected: The latest product lineup is Fountain remix, Summer limited can, Zero Sugar Lime.
+    got:      The latest product lineup: Fountain remix, Summer limited can, Zero Sugar Lime.
+[5] task=groundedness
+    query:    Query: What's Shopify's current social media following?
+    expected: The social media following is X: 2,767,397 followers.
+    got:      The social followings are X: 2,767,397 followers.  The CEO is Tobi Lütke. The brand color is #00A1E0. The market cap is $2517.6B. The headquarters is Singapore. The annual revenue is $2517.6B (2024...
+[6] task=groundedness
+    query:    Query: What is Coca-Cola's latest latest product lineup?
+    expected: The latest product lineup is Fountain remix, Summer limited can, Zero Sugar Lime.
+    got:      The latest product lineup: Fountain remix, Summer limited can, Zero Sugar Lime.
+[7] task=groundedness
+    query:    Query: What's Spotify's current social media following?
+    expected: The social media following is TikTok: 11,165,755 followers.
+    got:      The social followings are TikTok: 11,165,755 followers.
+[8] task=groundedness
+    query:    Query: What is Stripe's latest social media following?
+    expected: The social media following is LinkedIn: 22,134,250 followers.
+    got:      The social follow: 22,134,250 followers.
+[9] task=groundedness
+    query:    Query: What's Spotify's current next major event?
+    expected: The next major event is Mar 12–14, 2026 — Global product keynote (livestream).
+    got:      The next major event is Mar 12–14, 2026 — Global product keynote (livestream). The brand color primary is #1DB954. The market cap is $736.8B. The customer satisfaction nps is NPS 68 (Q2 2025). The ...
+[10] task=groundedness
+    query:    Query: Make an Instagram reel for Airbnb: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Air
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Airbnb
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Airbnb
+[11] task=groundedness
+    query:    Query: Produce a TV spot storyboard video for Sephora (Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Sep)
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Sephora
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Sephora The headquarters is Amsterdam.
+[12] task=groundedness
+    query:    Query: How much is Sephora's annual revenue right now?
+    expected: The annual revenue is $155.49B (2026).
+    got:      The annual revenue is $155.49B (2026). The CEO is James Okonkwo.
+[13] task=groundedness
+    query:    Query: What's Disney's current customer NPS?
+    expected: The customer NPS is NPS 38 (Q1 2025).
+    got:      The customer NPS 38 (Q1 2025).
+[14] task=groundedness
+    query:    Query: What's Disney's current latest product lineup?
+    expected: The latest product lineup is Loyalty tier refresh, Flagship SKU, Holiday bundle.
+    got:      The latest product lineup: Loyalty tier refresh, Flagship SKU, Holiday bundle.
+[15] task=groundedness
+    query:    Query: Generate a 15s vertical ad for Patagonia — 15s vertical ad: Patagonia hero product in urban night scene, neon reflections,
+    expected: Video plan: 15s vertical ad: Patagonia hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+    got:      K: 15s vertical ad: Patagonia hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26 U: Open Happiness — Share the Moment S: Maria Lopez C: ...
+[16] task=groundedness
+    query:    Query: Tell me Adidas's customer NPS.
+    expected: The customer NPS is NPS 31 (Q1 2025).
+    got:      The customer NPS 31 (Q1 2025).
+[17] task=groundedness
+    query:    Query: What's Starbucks's current latest product lineup?
+    expected: The latest product lineup is Fountain remix, Summer limited can, Zero Sugar Lime.
+    got:      The latest product lineup: Fountain remix, Summer limited can, Zero Sugar Lime.
+[18] task=groundedness
+    query:    Query: I need a product launch teaser video for Stripe.
+    expected: Video plan: 6s teaser: silhouette reveal, logo sting, 'Coming March 2026' supers
+    got:      15s vertical ad: Stripe 6s teaser: silhouette reveal, logo sting, 'Coming March 2026' supers, end card with promo code SUMMER26
+[19] task=groundedness
+    query:    Query: For Salesforce, what is the employee count?
+    expected: The employee count is 32,702.
+    got:      The employee count是32,702。
+[20] task=groundedness
+    query:    Query: Generate a 15s vertical ad for Tesla — 15s vertical ad: Tesla hero product in urban night scene, neon reflections, upbe
+    expected: Video plan: 15s vertical ad: Tesla hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+    got:      Hook: 'POV: you finally upgraded' 3 quick cuts CTA: link in bio Brand: Tesla 15s vertical ad: Tesla hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo...
+[21] task=groundedness
+    query:    Query: Produce a TV spot storyboard video for Netflix (Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Net)
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Netflix
+    got:      Storyboard: Scene1: family morning | Scene2: product in use | Scene3: logo + URL Hook: 'POV: you finally upgraded' CTA: link in bio Brand: Netflix
+[22] task=groundedness
+    query:    Query: Create a short promo video for Coca-Cola based on: 15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections,
+    expected: Video plan: 15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+    got:      promo video: 15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+[23] task=groundedness
+    query:    Query: Generate a 15s vertical ad for Nike — Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Nik
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Nike
+    got:      Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Nike
+[24] task=groundedness
+    query:    Query: How much is Tesla's main competitor mentioned in filings right now?
+    expected: The main competitor mentioned in filings is Pepsi.
+    got:      The main competitor mentioned in filings right now is Pepsi.
+[25] task=groundedness
+    query:    Query: Produce a TV spot storyboard video for Netflix (Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Net)
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Netflix
+    got:      Storyboard: Scene1: family morning | Scene2: product in use | Scene3: logo + URL Hook: 'POV: you finally upgraded' CTA: link in bio Brand: Netflix
+[26] task=groundedness
+    query:    Query: Create a short promo video for Coca-Cola based on: 15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections,
+    expected: Video plan: 15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+    got:      promo video: 15s vertical ad: Coca-Cola hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+[27] task=groundedness
+    query:    Query: Make an Instagram reel for Stripe: 15s vertical ad: Stripe hero product in urban night scene, neon reflections, upb
+    expected: Video plan: 15s vertical ad: Stripe hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+    got:      #promo_video_brief 15s vertical ad: Stripe hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26  Brand color: #00A1E0  Market cap: $91.6B ...
+[28] task=groundedness
+    query:    Query: What's Rivian's current social media following?
+    expected: The social media following is LinkedIn: 32,790,824 followers.
+    got:      The social media following is 32,790,824.  #000000 #SUMMER26 Booking.com
+[29] task=groundedness
+    query:    Query: Generate a 15s vertical ad for Salesforce — Scene1: family morning | Scene2: product in use | Scene3: logo + URL
+    expected: Video plan: Scene1: family morning | Scene2: product in use | Scene3: logo + URL
+    got:      K: Ceo: Marc Benioff K: Instagram reel script: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio K: Stock price: $667.88 K: Market cap: $1281.1B K: Product launch teaser: 6s tease...
+[30] task=groundedness
+    query:    Query: What's Peloton's current annual revenue?
+    expected: The annual revenue is $34.38B (2026).
+    got:      The annual revenue is $34.38B (2026). The competitive landscape is booking.com.
+[31] task=groundedness
+    query:    Query: I need a product launch teaser video for HubSpot.
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: HubSpot
+    got:      Instagram: POV: you finally upgraded | 3 quick cuts | CTA: link in bio | Brand: HubSpot Jane Smith | $36.71B (2024) | Nov 12–14, 2026 — Global product keynote (livestream)
+[32] task=groundedness
+    query:    Query: I need a product launch teaser video for Salesforce.
+    expected: Video plan: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: Salesforce
+    got:      - ceo: marcus benioff - Instagram reel script: Hook: 'POV: you finally upgraded' | 3 quick cuts | CTA: link in bio | Brand: salesforce - stock_price: $667.88 - market_cap: $1281.1B - product_launch...
+[33] task=groundedness
+    query:    Query: What is Stripe's latest social media following?
+    expected: The social media following is LinkedIn: 22,134,250 followers.
+    got:      The social follow: 22,134,250 followers.
+[34] task=groundedness
+    query:    Query: What's Disney's current latest product lineup?
+    expected: The latest product lineup is Loyalty tier refresh, Flagship SKU, Holiday bundle.
+    got:      The latest product lineup: Loyalty tier refresh, Flagship SKU, Holiday bundle.
+[35] task=groundedness
+    query:    Query: What is Tesla's latest social media following?
+    expected: The social media following is Instagram: 38,179,090 followers.
+    got:      The social followings are Instagram: 38,179,090 followers.
+[36] task=groundedness
+    query:    Query: What's Stripe's current next major event?
+    expected: The next major event is Sep 12–14, 2026 — Global product keynote (livestream).
+    got:      Sep 12–14, 2026 — Global product keynote (livestream).
+[37] task=groundedness
+    query:    Query: Create a short promo video for OpenAI based on: 6s teaser: silhouette reveal, logo sting, 'Coming March 2026' supers
+    expected: Video plan: 6s teaser: silhouette reveal, logo sting, 'Coming March 2026' supers
+    got:      6s hero product in urban night scene, neon reflections, upbeat electronic track, end card with promo code SUMMER26
+[38] task=groundedness
+    query:    Query: What's Stripe's current next major event?
+    expected: The next major event is Sep 12–14, 2026 — Global product keynote (livestream).
+    got:      Sep 12–14, 2026 — Global product keynote (livestream).
+--- end errors ---
+eval_seconds: 91.5
+
+Log saved to: C:\Users\99273\OneDrive\文档\autoresearch\val.log
+
+# val.py log ended 2026-05-25T12:30:22
