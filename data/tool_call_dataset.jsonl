@@ -1,0 +1,54 @@
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is the current stock price of Tesla?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "How has Tesla's stock price performed recently?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Can you show a video of Tesla's stock price trends over the past year?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What factors are influencing Tesla's stock price today?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What was Tesla's annual revenue in 2025?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "How much revenue did Tesla generate in 2025 compared to previous years?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Can you provide details on Tesla's 2025 annual revenue figures?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What tools or methods were used to calculate Tesla's 2025 annual revenue?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is the latest product Tesla has released?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What new features does Tesla's FSD v14.3 include?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Can you show a video demonstration of Tesla's Cybercab?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is Tesla's current focus with their Robotaxi project?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is the current stock price of Meta?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "How has Meta's stock price performed recently?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Can you provide information on Meta's stock price history?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What factors are influencing Meta's current stock price of $600.00?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What was Meta's annual revenue in 2025?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "How much did Meta earn in revenue during the fiscal year 2025?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Can you provide the revenue figure for Meta in the year 2025?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is the estimated annual revenue of Meta for the year 2025?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What's the latest product Meta has released recently?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Can you tell me about Meta's newest application and its features?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What are the latest products that Meta has developed?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is the most recent product launched by Meta and what does it do?", "output": "YES"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Who leads Tesla's executive team?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is the role of the CEO at Meta compared to Tesla's leadership structure?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Who leads Meta's executive team?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "When did Meta change its name from Facebook?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Who were the founders of Tesla?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What was the original name of the company that later became Meta?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Where is Tesla's headquarters located?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Which country is Meta originally from?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Where is the headquarters of Meta located?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is Tesla's primary focus in the automotive industry?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What does Meta specialize in terms of technology and services?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is the main area of operation for both Meta and Tesla?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is the Meta Portal?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is the Tesla Model S?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is the Meta Quest 3?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What subsidiaries does Tesla have in the automotive technology sector?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Which brands are owned by Meta under its parent company?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Does Tesla own any major subsidiaries related to its electric vehicle production?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is Meta's primary source of income?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "How does Meta's business model differ from Tesla's?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "How does Meta's business model differ from traditional tech companies?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Who are Meta's primary competitors in the social media space?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Which companies are key rivals to Tesla in the electric vehicle market?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "How does Meta compete with other tech giants in the online advertising industry?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What is Tesla's approach to autonomous driving technology?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "How does Meta leverage its platform for virtual and augmented reality?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What are the key features of Meta's technology platform in social media?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "Why is Tesla often seen as a leader in innovation despite its challenges?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "How has Meta's culture influenced its reputation in the tech industry?", "output": "NO"}
+{"instruction": "<|task|>tool_call\nDoes this query require calling a tool? Answer YES or NO.", "input": "What factors have contributed to Tesla's strong public perception in the automotive sector?", "output": "NO"}

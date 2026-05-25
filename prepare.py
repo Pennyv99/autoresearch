@@ -1,389 +1,467 @@
 """
-One-time data preparation for autoresearch experiments.
-Downloads data shards and trains a BPE tokenizer.
+Fixed data prep and runtime utilities for Qwen SFT/DPO autoresearch.
 
 Usage:
-    python prepare.py                  # full prep (download + tokenizer)
-    python prepare.py --num-shards 8   # download only 8 shards (for testing)
-
-Data and tokenizer are stored in ~/.cache/autoresearch/.
+    uv run prepare.py          # verify data + cache model/tokenizer
 """
 
+import json
 import os
-import sys
-import time
-import math
-import argparse
-import pickle
-from multiprocessing import Pool
+import random
+from pathlib import Path
 
-import requests
-import pyarrow.parquet as pq
-import rustbpe
-import tiktoken
 import torch
+import torch.nn.functional as F
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # ---------------------------------------------------------------------------
 # Constants (fixed, do not modify)
 # ---------------------------------------------------------------------------
 
-MAX_SEQ_LEN = 2048       # context length
-TIME_BUDGET = 300        # training time budget in seconds (5 minutes)
-EVAL_TOKENS = 40 * 524288  # number of tokens for val eval
+MAX_SEQ_LEN = 512
+DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+
+REPO_ROOT = Path(__file__).resolve().parent
+DATA_PATH = REPO_ROOT / "data" / "dpo.jsonl"
+DATA_MARKER = REPO_ROOT / "data" / ".dataset_ready"
+SAMPLE_400_PATH = REPO_ROOT / "data" / "sample_400.jsonl"
+TRAIN_PATH = REPO_ROOT / "data" / "train_320.jsonl"
+VAL_PATH = REPO_ROOT / "data" / "val_80.jsonl"
+
+TOTAL_SAMPLES = 400
+SAMPLE_SEED = 42
+YES_NO_RATIO = 0.30
+TRAIN_RATIO = 0.80
+
+CACHE_DIR = Path(os.path.expanduser("~")) / ".cache" / "autoresearch"
+SPLIT_CACHE = CACHE_DIR / "split_400.json"
 
 # ---------------------------------------------------------------------------
-# Configuration
+# Dataset loading
 # ---------------------------------------------------------------------------
 
-CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "autoresearch")
-DATA_DIR = os.path.join(CACHE_DIR, "data")
-TOKENIZER_DIR = os.path.join(CACHE_DIR, "tokenizer")
-BASE_URL = "https://huggingface.co/datasets/karpathy/climbmix-400b-shuffle/resolve/main"
-MAX_SHARD = 6542 # the last datashard is shard_06542.parquet
-VAL_SHARD = MAX_SHARD  # pinned validation shard (shard_06542)
-VAL_FILENAME = f"shard_{VAL_SHARD:05d}.parquet"
-VOCAB_SIZE = 8192
-
-# BPE split pattern (GPT-4 style, with \p{N}{1,2} instead of {1,3})
-SPLIT_PATTERN = r"""'(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}+|\p{N}{1,2}| ?[^\s\p{L}\p{N}]++[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+"""
-
-SPECIAL_TOKENS = [f"<|reserved_{i}|>" for i in range(4)]
-BOS_TOKEN = "<|reserved_0|>"
-
-# ---------------------------------------------------------------------------
-# Data download
-# ---------------------------------------------------------------------------
-
-def download_single_shard(index):
-    """Download one parquet shard with retries. Returns True on success."""
-    filename = f"shard_{index:05d}.parquet"
-    filepath = os.path.join(DATA_DIR, filename)
-    if os.path.exists(filepath):
-        return True
-
-    url = f"{BASE_URL}/{filename}"
-    max_attempts = 5
-    for attempt in range(1, max_attempts + 1):
-        try:
-            response = requests.get(url, stream=True, timeout=30)
-            response.raise_for_status()
-            temp_path = filepath + ".tmp"
-            with open(temp_path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=1024 * 1024):
-                    if chunk:
-                        f.write(chunk)
-            os.rename(temp_path, filepath)
-            print(f"  Downloaded {filename}")
-            return True
-        except (requests.RequestException, IOError) as e:
-            print(f"  Attempt {attempt}/{max_attempts} failed for {filename}: {e}")
-            for path in [filepath + ".tmp", filepath]:
-                if os.path.exists(path):
-                    try:
-                        os.remove(path)
-                    except OSError:
-                        pass
-            if attempt < max_attempts:
-                time.sleep(2 ** attempt)
-    return False
+def normalize_output(text, task):
+    text = (text or "").strip()
+    if task == "tool_call":
+        upper = text.upper()
+        if upper in ("YES", "NO"):
+            return upper
+    return text
 
 
-def download_data(num_shards, download_workers=8):
-    """Download training shards + pinned validation shard."""
-    os.makedirs(DATA_DIR, exist_ok=True)
-    num_train = min(num_shards, MAX_SHARD)
-    ids = list(range(num_train))
-    if VAL_SHARD not in ids:
-        ids.append(VAL_SHARD)
-
-    # Count what's already downloaded
-    existing = sum(1 for i in ids if os.path.exists(os.path.join(DATA_DIR, f"shard_{i:05d}.parquet")))
-    if existing == len(ids):
-        print(f"Data: all {len(ids)} shards already downloaded at {DATA_DIR}")
-        return
-
-    needed = len(ids) - existing
-    print(f"Data: downloading {needed} shards ({existing} already exist)...")
-
-    workers = max(1, min(download_workers, needed))
-    with Pool(processes=workers) as pool:
-        results = pool.map(download_single_shard, ids)
-
-    ok = sum(1 for r in results if r)
-    print(f"Data: {ok}/{len(ids)} shards ready at {DATA_DIR}")
-
-# ---------------------------------------------------------------------------
-# Tokenizer training
-# ---------------------------------------------------------------------------
-
-def list_parquet_files():
-    """Return sorted list of parquet file paths in the data directory."""
-    files = sorted(f for f in os.listdir(DATA_DIR) if f.endswith(".parquet") and not f.endswith(".tmp"))
-    return [os.path.join(DATA_DIR, f) for f in files]
+def build_user_content(record):
+    instruction = (record.get("instruction") or "").strip()
+    inp = (record.get("input") or "").strip()
+    if instruction and inp:
+        return f"{instruction}\n\n{inp}"
+    return instruction or inp
 
 
-def text_iterator(max_chars=1_000_000_000, doc_cap=10_000):
-    """Yield documents from training split (all shards except pinned val shard)."""
-    parquet_paths = [p for p in list_parquet_files() if not p.endswith(VAL_FILENAME)]
-    nchars = 0
-    for filepath in parquet_paths:
-        pf = pq.ParquetFile(filepath)
-        for rg_idx in range(pf.num_row_groups):
-            rg = pf.read_row_group(rg_idx)
-            for text in rg.column("text").to_pylist():
-                doc = text[:doc_cap] if len(text) > doc_cap else text
-                nchars += len(doc)
-                yield doc
-                if nchars >= max_chars:
-                    return
+def build_messages(record, assistant_content=None):
+    if record.get("messages"):
+        messages = [{"role": m["role"], "content": m["content"]} for m in record["messages"]]
+        if assistant_content is not None:
+            messages = messages[:-1] + [{"role": "assistant", "content": assistant_content}]
+        elif messages[-1]["role"] == "assistant":
+            messages[-1]["content"] = normalize_output(messages[-1]["content"], record.get("task"))
+        return messages
+
+    user_content = build_user_content(record)
+    assistant = assistant_content if assistant_content is not None else record["chosen"]
+    return [
+        {"role": "user", "content": user_content},
+        {"role": "assistant", "content": normalize_output(assistant, record.get("task"))},
+    ]
 
 
-def train_tokenizer():
-    """Train BPE tokenizer using rustbpe, save as tiktoken pickle."""
-    tokenizer_pkl = os.path.join(TOKENIZER_DIR, "tokenizer.pkl")
-    token_bytes_path = os.path.join(TOKENIZER_DIR, "token_bytes.pt")
-
-    if os.path.exists(tokenizer_pkl) and os.path.exists(token_bytes_path):
-        print(f"Tokenizer: already trained at {TOKENIZER_DIR}")
-        return
-
-    os.makedirs(TOKENIZER_DIR, exist_ok=True)
-
-    parquet_files = list_parquet_files()
-    if len(parquet_files) < 2:
-        print("Tokenizer: need at least 2 data shards (1 train + 1 val). Download more data first.")
-        sys.exit(1)
-
-    # --- Train with rustbpe ---
-    print("Tokenizer: training BPE tokenizer...")
-    t0 = time.time()
-
-    tokenizer = rustbpe.Tokenizer()
-    vocab_size_no_special = VOCAB_SIZE - len(SPECIAL_TOKENS)
-    tokenizer.train_from_iterator(text_iterator(), vocab_size_no_special, pattern=SPLIT_PATTERN)
-
-    # Build tiktoken encoding from trained merges
-    pattern = tokenizer.get_pattern()
-    mergeable_ranks = {bytes(k): v for k, v in tokenizer.get_mergeable_ranks()}
-    tokens_offset = len(mergeable_ranks)
-    special_tokens = {name: tokens_offset + i for i, name in enumerate(SPECIAL_TOKENS)}
-    enc = tiktoken.Encoding(
-        name="rustbpe",
-        pat_str=pattern,
-        mergeable_ranks=mergeable_ranks,
-        special_tokens=special_tokens,
-    )
-
-    # Save tokenizer
-    with open(tokenizer_pkl, "wb") as f:
-        pickle.dump(enc, f)
-
-    t1 = time.time()
-    print(f"Tokenizer: trained in {t1 - t0:.1f}s, saved to {tokenizer_pkl}")
-
-    # --- Build token_bytes lookup for BPB evaluation ---
-    print("Tokenizer: building token_bytes lookup...")
-    special_set = set(SPECIAL_TOKENS)
-    token_bytes_list = []
-    for token_id in range(enc.n_vocab):
-        token_str = enc.decode([token_id])
-        if token_str in special_set:
-            token_bytes_list.append(0)
-        else:
-            token_bytes_list.append(len(token_str.encode("utf-8")))
-    token_bytes_tensor = torch.tensor(token_bytes_list, dtype=torch.int32)
-    torch.save(token_bytes_tensor, token_bytes_path)
-    print(f"Tokenizer: saved token_bytes to {token_bytes_path}")
-
-    # Sanity check
-    test = "Hello world! Numbers: 123. Unicode: 你好"
-    encoded = enc.encode_ordinary(test)
-    decoded = enc.decode(encoded)
-    assert decoded == test, f"Tokenizer roundtrip failed: {test!r} -> {decoded!r}"
-    print(f"Tokenizer: sanity check passed (vocab_size={enc.n_vocab})")
-
-# ---------------------------------------------------------------------------
-# Runtime utilities (imported by train.py)
-# ---------------------------------------------------------------------------
-
-class Tokenizer:
-    """Minimal tokenizer wrapper. Training is handled above."""
-
-    def __init__(self, enc):
-        self.enc = enc
-        self.bos_token_id = enc.encode_single_token(BOS_TOKEN)
-
-    @classmethod
-    def from_directory(cls, tokenizer_dir=TOKENIZER_DIR):
-        with open(os.path.join(tokenizer_dir, "tokenizer.pkl"), "rb") as f:
-            enc = pickle.load(f)
-        return cls(enc)
-
-    def get_vocab_size(self):
-        return self.enc.n_vocab
-
-    def get_bos_token_id(self):
-        return self.bos_token_id
-
-    def encode(self, text, prepend=None, num_threads=8):
-        if prepend is not None:
-            prepend_id = prepend if isinstance(prepend, int) else self.enc.encode_single_token(prepend)
-        if isinstance(text, str):
-            ids = self.enc.encode_ordinary(text)
-            if prepend is not None:
-                ids.insert(0, prepend_id)
-        elif isinstance(text, list):
-            ids = self.enc.encode_ordinary_batch(text, num_threads=num_threads)
-            if prepend is not None:
-                for row in ids:
-                    row.insert(0, prepend_id)
-        else:
-            raise ValueError(f"Invalid input type: {type(text)}")
-        return ids
-
-    def decode(self, ids):
-        return self.enc.decode(ids)
+def load_all_records():
+    if not DATA_PATH.exists():
+        raise FileNotFoundError(f"Dataset not found: {DATA_PATH}")
+    records = []
+    with open(DATA_PATH, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                records.append(json.loads(line))
+    return records
 
 
-def get_token_bytes(device="cpu"):
-    path = os.path.join(TOKENIZER_DIR, "token_bytes.pt")
-    with open(path, "rb") as f:
-        return torch.load(f, map_location=device)
+def stratified_sample(records):
+    tool_call = [r for r in records if r.get("task") == "tool_call"]
+    groundedness = [r for r in records if r.get("task") == "groundedness"]
+    n_tool = int(round(TOTAL_SAMPLES * YES_NO_RATIO))
+    n_ground = TOTAL_SAMPLES - n_tool
+    if len(tool_call) < n_tool or len(groundedness) < n_ground:
+        raise ValueError(
+            f"Not enough samples: need {n_tool} tool_call and {n_ground} groundedness, "
+            f"have {len(tool_call)} and {len(groundedness)}"
+        )
+    rng = random.Random(SAMPLE_SEED)
+    sampled = rng.sample(tool_call, n_tool) + rng.sample(groundedness, n_ground)
+    rng.shuffle(sampled)
+    return sampled
 
 
-def _document_batches(split, tokenizer_batch_size=128):
-    """Infinite iterator over document batches from parquet files."""
-    parquet_paths = list_parquet_files()
-    assert len(parquet_paths) > 0, "No parquet files found. Run prepare.py first."
-    val_path = os.path.join(DATA_DIR, VAL_FILENAME)
-    if split == "train":
-        parquet_paths = [p for p in parquet_paths if p != val_path]
-        assert len(parquet_paths) > 0, "No training shards found."
+def split_records(records):
+    n_train = int(len(records) * TRAIN_RATIO)
+    return records[:n_train], records[n_train:]
+
+
+def write_jsonl(path, records):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        for record in records:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def export_splits_to_data(train, val):
+    write_jsonl(TRAIN_PATH, train)
+    write_jsonl(VAL_PATH, val)
+    write_jsonl(SAMPLE_400_PATH, train + val)
+
+
+def get_splits():
+    if SPLIT_CACHE.exists():
+        with open(SPLIT_CACHE, encoding="utf-8") as f:
+            cached = json.load(f)
+        train, val = cached["train"], cached["val"]
     else:
-        parquet_paths = [val_path]
-    epoch = 1
-    while True:
-        for filepath in parquet_paths:
-            pf = pq.ParquetFile(filepath)
-            for rg_idx in range(pf.num_row_groups):
-                rg = pf.read_row_group(rg_idx)
-                batch = rg.column('text').to_pylist()
-                for i in range(0, len(batch), tokenizer_batch_size):
-                    yield batch[i:i+tokenizer_batch_size], epoch
-        epoch += 1
+        sampled = stratified_sample(load_all_records())
+        train, val = split_records(sampled)
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        with open(SPLIT_CACHE, "w", encoding="utf-8") as f:
+            json.dump({"train": train, "val": val}, f, ensure_ascii=False)
+
+    export_splits_to_data(train, val)
+    return train, val
 
 
-def make_dataloader(tokenizer, B, T, split, buffer_size=1000):
-    """
-    BOS-aligned dataloader with best-fit packing.
-    Every row starts with BOS. Documents packed using best-fit to minimize cropping.
-    When no document fits remaining space, crops shortest doc to fill exactly.
-    100% utilization (no padding).
-    """
-    assert split in ["train", "val"]
-    row_capacity = T + 1
-    batches = _document_batches(split)
-    bos_token = tokenizer.get_bos_token_id()
-    doc_buffer = []
-    epoch = 1
+def split_stats(split):
+    counts = {}
+    for r in split:
+        counts[r.get("task", "unknown")] = counts.get(r.get("task", "unknown"), 0) + 1
+    return counts
 
-    def refill_buffer():
-        nonlocal epoch
-        doc_batch, epoch = next(batches)
-        token_lists = tokenizer.encode(doc_batch, prepend=bos_token)
-        doc_buffer.extend(token_lists)
-
-    # Pre-allocate buffers: [inputs (B*T) | targets (B*T)]
-    row_buffer = torch.empty((B, row_capacity), dtype=torch.long)
-    cpu_buffer = torch.empty(2 * B * T, dtype=torch.long, pin_memory=True)
-    gpu_buffer = torch.empty(2 * B * T, dtype=torch.long, device="cuda")
-    cpu_inputs = cpu_buffer[:B * T].view(B, T)
-    cpu_targets = cpu_buffer[B * T:].view(B, T)
-    inputs = gpu_buffer[:B * T].view(B, T)
-    targets = gpu_buffer[B * T:].view(B, T)
-
-    while True:
-        for row_idx in range(B):
-            pos = 0
-            while pos < row_capacity:
-                while len(doc_buffer) < buffer_size:
-                    refill_buffer()
-
-                remaining = row_capacity - pos
-
-                # Find largest doc that fits entirely
-                best_idx = -1
-                best_len = 0
-                for i, doc in enumerate(doc_buffer):
-                    doc_len = len(doc)
-                    if doc_len <= remaining and doc_len > best_len:
-                        best_idx = i
-                        best_len = doc_len
-
-                if best_idx >= 0:
-                    doc = doc_buffer.pop(best_idx)
-                    row_buffer[row_idx, pos:pos + len(doc)] = torch.tensor(doc, dtype=torch.long)
-                    pos += len(doc)
-                else:
-                    # No doc fits — crop shortest to fill remaining
-                    shortest_idx = min(range(len(doc_buffer)), key=lambda i: len(doc_buffer[i]))
-                    doc = doc_buffer.pop(shortest_idx)
-                    row_buffer[row_idx, pos:pos + remaining] = torch.tensor(doc[:remaining], dtype=torch.long)
-                    pos += remaining
-
-        cpu_inputs.copy_(row_buffer[:, :-1])
-        cpu_targets.copy_(row_buffer[:, 1:])
-        gpu_buffer.copy_(cpu_buffer, non_blocking=True)
-        yield inputs, targets, epoch
 
 # ---------------------------------------------------------------------------
-# Evaluation (DO NOT CHANGE — this is the fixed metric)
+# Tokenizer / model helpers
 # ---------------------------------------------------------------------------
+
+def load_tokenizer(model_name=DEFAULT_MODEL):
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    return tokenizer
+
+
+def load_base_model(model_name=DEFAULT_MODEL, device="cuda"):
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        dtype=torch.bfloat16,
+        trust_remote_code=True,
+    )
+    return model.to(device)
+
+
+# ---------------------------------------------------------------------------
+# Tokenization
+# ---------------------------------------------------------------------------
+
+def _encode_prompt(tokenizer, record):
+    user_messages = [{"role": "user", "content": build_user_content(record)}]
+    prompt_text = tokenizer.apply_chat_template(
+        user_messages, tokenize=False, add_generation_prompt=True
+    )
+    return tokenizer.encode(prompt_text, add_special_tokens=False)
+
+
+def tokenize_sft_example(tokenizer, record, max_len):
+    messages = build_messages(record)
+    prompt_ids = _encode_prompt(tokenizer, record)
+    full_text = tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=False
+    )
+    input_ids = tokenizer.encode(full_text, add_special_tokens=False)[:max_len]
+    labels = [-100] * min(len(prompt_ids), len(input_ids))
+    labels += input_ids[len(labels):]
+    labels = labels[:max_len]
+    pad_id = tokenizer.pad_token_id or tokenizer.eos_token_id
+    if len(input_ids) < max_len:
+        pad_len = max_len - len(input_ids)
+        input_ids = input_ids + [pad_id] * pad_len
+        labels = labels + [-100] * pad_len
+    return input_ids, labels
+
+
+def tokenize_dpo_example(tokenizer, record, max_len):
+    prompt_ids = _encode_prompt(tokenizer, record)
+    prompt_len = len(prompt_ids)
+
+    def response_ids(text):
+        text = normalize_output(text, record.get("task"))
+        resp_messages = build_messages(record, assistant_content=text)
+        full_text = tokenizer.apply_chat_template(
+            resp_messages, tokenize=False, add_generation_prompt=False
+        )
+        full_ids = tokenizer.encode(full_text, add_special_tokens=False)
+        return full_ids[prompt_len:]
+
+    chosen_ids = response_ids(record["chosen"])
+    rejected_ids = response_ids(record["rejected"])
+    max_resp = max(len(chosen_ids), len(rejected_ids), 1)
+    max_prompt = max_len - max_resp
+    if prompt_len > max_prompt:
+        prompt_ids = prompt_ids[:max_prompt]
+        prompt_len = len(prompt_ids)
+
+    def pack(response):
+        ids = prompt_ids + response
+        if len(ids) > max_len:
+            ids = ids[:max_len]
+        attn = [1] * len(ids)
+        labels = [-100] * prompt_len + ids[prompt_len:]
+        pad_id = tokenizer.pad_token_id or tokenizer.eos_token_id
+        if len(ids) < max_len:
+            pad_len = max_len - len(ids)
+            ids = ids + [pad_id] * pad_len
+            attn = attn + [0] * pad_len
+            labels = labels + [-100] * pad_len
+        return ids, attn, labels
+
+    return pack(chosen_ids), pack(rejected_ids)
+
+
+def _pad_batch(items, pad_value=0):
+    max_len = max(len(x) for x in items)
+    return [item + [pad_value] * (max_len - len(item)) for item in items]
+
+
+def collate_sft(records, tokenizer, max_len):
+    pairs = [tokenize_sft_example(tokenizer, r, max_len) for r in records]
+    pad_id = tokenizer.pad_token_id or tokenizer.eos_token_id
+    input_ids = torch.tensor(_pad_batch([p[0] for p in pairs], pad_value=pad_id), dtype=torch.long)
+    labels = torch.tensor(_pad_batch([p[1] for p in pairs], pad_value=-100), dtype=torch.long)
+    attention_mask = (input_ids != pad_id).long()
+    return {"input_ids": input_ids, "labels": labels, "attention_mask": attention_mask}
+
+
+def collate_dpo(records, tokenizer, max_len):
+    chosen_items, rejected_items = [], []
+    for r in records:
+        c, rej = tokenize_dpo_example(tokenizer, r, max_len)
+        chosen_items.append(c)
+        rejected_items.append(rej)
+
+    def stack(side):
+        input_ids = torch.tensor(_pad_batch([x[0] for x in side]), dtype=torch.long)
+        attention_mask = torch.tensor(_pad_batch([x[1] for x in side]), dtype=torch.long)
+        labels = torch.tensor(_pad_batch([x[2] for x in side], pad_value=-100), dtype=torch.long)
+        return input_ids, attention_mask, labels
+
+    c_ids, c_mask, c_labels = stack(chosen_items)
+    r_ids, r_mask, r_labels = stack(rejected_items)
+    return {
+        "chosen_input_ids": c_ids,
+        "chosen_attention_mask": c_mask,
+        "chosen_labels": c_labels,
+        "rejected_input_ids": r_ids,
+        "rejected_attention_mask": r_mask,
+        "rejected_labels": r_labels,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Dataloaders (infinite iterators for training)
+# ---------------------------------------------------------------------------
+
+def make_sft_dataloader(records, tokenizer, batch_size, max_len, shuffle=True):
+    rng = random.Random(SAMPLE_SEED)
+    while True:
+        order = records[:]
+        if shuffle:
+            rng.shuffle(order)
+        for i in range(0, len(order), batch_size):
+            batch = order[i:i + batch_size]
+            if batch:
+                yield collate_sft(batch, tokenizer, max_len)
+
+
+def make_dpo_dataloader(records, tokenizer, batch_size, max_len, shuffle=True):
+    rng = random.Random(SAMPLE_SEED + 1)
+    while True:
+        order = records[:]
+        if shuffle:
+            rng.shuffle(order)
+        for i in range(0, len(order), batch_size):
+            batch = order[i:i + batch_size]
+            if batch:
+                yield collate_dpo(batch, tokenizer, max_len)
+
+
+def iter_sft_batches(records, tokenizer, batch_size, max_len):
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i + batch_size]
+        if batch:
+            yield collate_sft(batch, tokenizer, max_len)
+
+
+def iter_dpo_batches(records, tokenizer, batch_size, max_len):
+    for i in range(0, len(records), batch_size):
+        batch = records[i:i + batch_size]
+        if batch:
+            yield collate_dpo(batch, tokenizer, max_len)
+
+
+# ---------------------------------------------------------------------------
+# Evaluation (DO NOT CHANGE — fixed metrics)
+# ---------------------------------------------------------------------------
+
+def _sequence_logps(logits, labels):
+    shift_logits = logits[..., :-1, :].contiguous()
+    shift_labels = labels[..., 1:].contiguous()
+    log_probs = F.log_softmax(shift_logits, dim=-1)
+    mask = shift_labels != -100
+    safe_labels = shift_labels.clamp(min=0)
+    token_logps = log_probs.gather(-1, safe_labels.unsqueeze(-1)).squeeze(-1)
+    token_logps = token_logps * mask
+    seq_logps = token_logps.sum(dim=-1)
+    return token_logps.sum(dim=-1)
+
 
 @torch.no_grad()
-def evaluate_bpb(model, tokenizer, batch_size):
-    """
-    Bits per byte (BPB): vocab size-independent evaluation metric.
-    Sums per-token cross-entropy (in nats), sums target byte lengths,
-    then converts nats/byte to bits/byte. Special tokens (byte length 0)
-    are excluded from both sums.
-    Uses fixed MAX_SEQ_LEN so results are comparable across configs.
-    """
-    token_bytes = get_token_bytes(device="cuda")
-    val_loader = make_dataloader(tokenizer, batch_size, MAX_SEQ_LEN, "val")
-    steps = EVAL_TOKENS // (batch_size * MAX_SEQ_LEN)
-    total_nats = 0.0
-    total_bytes = 0
-    for _ in range(steps):
-        x, y, _ = next(val_loader)
-        loss_flat = model(x, y, reduction='none').view(-1)
-        y_flat = y.view(-1)
-        nbytes = token_bytes[y_flat]
-        mask = nbytes > 0
-        total_nats += (loss_flat * mask).sum().item()
-        total_bytes += nbytes.sum().item()
-    return total_nats / (math.log(2) * total_bytes)
+def evaluate_sft_loss(model, tokenizer, val_records, batch_size, max_len=MAX_SEQ_LEN):
+    model.eval()
+    total_loss = 0.0
+    total_tokens = 0
+    device = next(model.parameters()).device
+    for batch in iter_sft_batches(val_records, tokenizer, batch_size, max_len):
+        batch = {k: v.to(device) for k, v in batch.items()}
+        outputs = model(**batch)
+        labels = batch["labels"]
+        mask = labels != -100
+        n_tokens = mask.sum().item()
+        if n_tokens == 0:
+            continue
+        loss = F.cross_entropy(
+            outputs.logits[:, :-1, :].reshape(-1, outputs.logits.size(-1)),
+            labels[:, 1:].reshape(-1),
+            ignore_index=-100,
+            reduction="sum",
+        )
+        total_loss += loss.item()
+        total_tokens += n_tokens
+    model.train()
+    return total_loss / max(total_tokens, 1)
+
+
+@torch.no_grad()
+def evaluate_dpo_loss(
+    model, tokenizer, val_records, batch_size, beta=0.1, max_len=MAX_SEQ_LEN, ref_model=None
+):
+    model.eval()
+    total_loss = 0.0
+    n_batches = 0
+    device = next(model.parameters()).device
+    for batch in iter_dpo_batches(val_records, tokenizer, batch_size, max_len):
+        batch = {k: v.to(device) for k, v in batch.items()}
+        loss = dpo_batch_loss(model, batch, beta, ref_model=ref_model)
+        total_loss += loss.item()
+        n_batches += 1
+    model.train()
+    return total_loss / max(n_batches, 1)
+
+
+def dpo_batch_loss(policy, batch, beta, ref_model=None):
+    def avg_logps(model, input_ids, attention_mask, labels):
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        return _sequence_logps(outputs.logits, labels)
+
+    pi_c = avg_logps(policy, batch["chosen_input_ids"], batch["chosen_attention_mask"], batch["chosen_labels"])
+    pi_r = avg_logps(policy, batch["rejected_input_ids"], batch["rejected_attention_mask"], batch["rejected_labels"])
+
+    with torch.no_grad():
+        if ref_model is not None:
+            ref_c = avg_logps(
+                ref_model,
+                batch["chosen_input_ids"],
+                batch["chosen_attention_mask"],
+                batch["chosen_labels"],
+            )
+            ref_r = avg_logps(
+                ref_model,
+                batch["rejected_input_ids"],
+                batch["rejected_attention_mask"],
+                batch["rejected_labels"],
+            )
+        else:
+            with policy.disable_adapter():
+                ref_c = avg_logps(
+                    policy,
+                    batch["chosen_input_ids"],
+                    batch["chosen_attention_mask"],
+                    batch["chosen_labels"],
+                )
+                ref_r = avg_logps(
+                    policy,
+                    batch["rejected_input_ids"],
+                    batch["rejected_attention_mask"],
+                    batch["rejected_labels"],
+                )
+
+    logits = beta * ((pi_c - pi_r) - (ref_c - ref_r))
+    return (-F.logsigmoid(logits)).mean()
+
+
+@torch.no_grad()
+def preview_val_generations(model, tokenizer, val_records, n_examples=3, max_new_tokens=64):
+    """Print a few val-set generations so you can eyeball quality."""
+    model.eval()
+    device = next(model.parameters()).device
+    examples = val_records[:n_examples]
+    print("--- val preview ---")
+    for i, record in enumerate(examples):
+        user_messages = [{"role": "user", "content": build_user_content(record)}]
+        prompt = tokenizer.apply_chat_template(
+            user_messages, tokenize=False, add_generation_prompt=True
+        )
+        inputs = tokenizer(prompt, return_tensors="pt").to(device)
+        output_ids = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            pad_token_id=tokenizer.pad_token_id,
+        )
+        new_tokens = output_ids[0, inputs["input_ids"].shape[1]:]
+        pred = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+        expected = normalize_output(record["chosen"], record.get("task"))
+        print(f"[{i + 1}] task={record.get('task')}")
+        print(f"  expected: {expected[:200]}")
+        print(f"  model:    {pred[:200]}")
+    print("--- end preview ---")
+    model.train()
+
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
+def verify_and_prepare(model_name=DEFAULT_MODEL):
+    records = load_all_records()
+    train, val = get_splits()
+    print(f"Dataset: data/dpo.jsonl ({len(records)} total rows)")
+    print(f"Sampled: {TOTAL_SAMPLES} (seed={SAMPLE_SEED})")
+    print(f"Train: {len(train)} {split_stats(train)}")
+    print(f"Val:   {len(val)} {split_stats(val)}")
+    print(f"Exported: data/train_320.jsonl, data/val_80.jsonl, data/sample_400.jsonl")
+    print(f"Split cache: autoresearch/split_400.json (under ~/.cache)")
+    print()
+    print(f"Loading tokenizer and model: {model_name}")
+    load_tokenizer(model_name)
+    _ = load_base_model(model_name, device="cpu")
+    DATA_MARKER.parent.mkdir(parents=True, exist_ok=True)
+    DATA_MARKER.write_text("ok\n", encoding="utf-8")
+    print("Done! Ready to train with: uv run train.py")
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Prepare data and tokenizer for autoresearch")
-    parser.add_argument("--num-shards", type=int, default=10, help="Number of training shards to download (-1 = all). Val shard is always pinned.")
-    parser.add_argument("--download-workers", type=int, default=8, help="Number of parallel download workers")
-    args = parser.parse_args()
-
-    num_shards = MAX_SHARD if args.num_shards == -1 else args.num_shards
-
-    print(f"Cache directory: {CACHE_DIR}")
-    print()
-
-    # Step 1: Download data
-    download_data(num_shards, download_workers=args.download_workers)
-    print()
-
-    # Step 2: Train tokenizer
-    train_tokenizer()
-    print()
-    print("Done! Ready to train.")
+    verify_and_prepare()
